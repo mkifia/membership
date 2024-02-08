@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PHP + Symfony backend
+  back:
+    container_name: membership_back
+    build:
+      context: .
+      dockerfile: ./infra/docker/php/Dockerfile
+    volumes:
+      - ./back:/var/www/api
+    working_dir: /var/www/api
+    depends_on:
+      - postgres
+      - rabbitmq
+    networks:
+      - membership
+
+  varnish:
+    image: varnish:latest
+    container_name: membership_varnish
+    volumes:
+      - ./infra/docker/varnish/default.vcl:/etc/varnish/default.vcl:ro
+    ports:
+      - "8080:80"
+      - "4000:4000"
+    depends_on:
+      - back
+    networks:
+      - membership
+
+  # Angular frontend
+  front:
+    container_name: membership_front
+    build:
+      context: .
+      dockerfile: ./infra/docker/node/Dockerfile
+    volumes:
+      - ./front:/usr/src/app
+    ports:
+      - "4200:4200"
+    networks:
+      - membership
+
+  # PostgreSQL
+  postgres:
+    container_name: membership_postgres
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: membership
+      POSTGRES_USER: membership
+      POSTGRES_PASSWORD: '!ChangeMe!'
+    ports:
+      - "5432:5432"
+    networks:
+      - membership
+
+  # Nginx as a reverse proxy
+  nginx:
+    container_name: membership_nginx
+    build:
+      context: .
+      dockerfile: ./infra/docker/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - back
+      - front
+    networks:
+      - membership
+
+  # RabbitMQ
+  rabbitmq:
+    container_name: membership_rabbitmq
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  # Mailcatcher or similar tool
+  mailcatcher:
+    container_name: membership_mailcatcher
+    image: dockage/mailcatcher
+    ports:
+      - "1080:1080"
+    networks:
+      - membership
+
+volumes:
+  postgres_data:
+
+networks:
+  membership:
+    driver: bridge

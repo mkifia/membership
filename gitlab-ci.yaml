@@ -1,0 +1,73 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  KUBE_CONFIG: "path/to/your/kubeconfig.yaml"
+  TERRAFORM_DIR: "infra/"
+
+before_script:
+  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - eval $(ssh-agent -s)
+  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+
+build_front:
+  stage: build
+  script:
+    - cd front
+    - npm install
+    - nx build
+  only:
+    - main
+    - merge_requests
+  artifacts:
+    paths:
+      - front/dist/
+
+build_back:
+  stage: build
+  script:
+    - cd back
+    - composer install
+    - ./bin/console cache:clear --env=prod
+  only:
+    - main
+    - merge_requests
+  artifacts:
+    paths:
+      - back/vendor/
+      - back/bin/
+
+test_front:
+  stage: test
+  script:
+    - cd front
+    - nx run-many -t test e2e -- --headless --watch=false
+  only:
+    - main
+    - merge_requests
+
+test_back:
+  stage: test
+  script:
+    - cd back
+    - ./vendor/bin/phpunit
+  only:
+    - main
+    - merge_requests
+
+deploy:
+  stage: deploy
+  script:
+    - cd $TERRAFORM_DIR
+    - terraform init
+    - terraform apply -auto-approve
+  only:
+    - main
+  environment:
+    name: production
