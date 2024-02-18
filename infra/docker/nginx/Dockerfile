@@ -8,6 +8,8 @@ RUN rm /etc/nginx/conf.d/default.conf
 # Copy custom Nginx configuration files
 COPY /infra/docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY /infra/docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+RUN echo "upstream php-upstream { server back:9000; }" > /etc/nginx/conf.d/upstream.conf
+RUN usermod -u 1000 www-data
 
 # Copy the built Angular application from the dist folder
 COPY /front/dist/membership/browser /usr/share/nginx/html

@@ -6,10 +6,13 @@ services:
     container_name: membership_back
     build:
       context: .
+      args:
+        TIMEZONE: Europe/Paris
       dockerfile: ./infra/docker/php/Dockerfile
     volumes:
-      - ./back:/var/www/api
-    working_dir: /var/www/api
+      - ./back:/srv/api:rw,cached
+      - ./back/public:/srv/api/public:rw,cached
+    working_dir: /srv/api
     depends_on:
       - postgres
     networks:
@@ -69,6 +72,9 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp"
+    volumes:
+      - ./infra/docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./back:/srv/api:cached
     depends_on:
       - back
       - front
