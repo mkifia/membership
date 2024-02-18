@@ -12,9 +12,10 @@ services:
     working_dir: /var/www/api
     depends_on:
       - postgres
-      - rabbitmq
     networks:
       - membership
+    ports:
+      - "9000:9000"
 
   varnish:
     image: varnish:latest
@@ -23,11 +24,12 @@ services:
       - ./infra/docker/varnish/default.vcl:/etc/varnish/default.vcl:ro
     ports:
       - "8080:80"
-      - "4000:4000"
     depends_on:
       - back
     networks:
       - membership
+    environment:
+      VARNISH_SIZE: 2G
 
   # Angular frontend
   front:
@@ -66,19 +68,12 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     depends_on:
       - back
       - front
     networks:
       - membership
-
-  # RabbitMQ
-  rabbitmq:
-    container_name: membership_rabbitmq
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
 
   # Mailcatcher or similar tool
   mailcatcher:

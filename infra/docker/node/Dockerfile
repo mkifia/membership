@@ -10,8 +10,10 @@ WORKDIR /usr/src/app
 # Copy package.json and package-lock.json
 COPY ./front/package*.json /usr/src/app/
 
+RUN npm install --global npm@latest
+
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 RUN pwd
 
